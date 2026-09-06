@@ -1,47 +1,21 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, BarChart3, Camera, CheckCircle2, ChevronRight, CircleUserRound, FileVideo, MapPin, Menu, Plus, Search, ShieldCheck, Sparkles, ThumbsUp, X } from 'lucide-react'
+
+type Report = { id: string; reportNo: string; title: string; category: string; description: string; location: string; latitude: number; longitude: number; status: string; severity: string; isAnonymous: boolean; upvotes: number; media: { name: string; type: string; url: string }[]; createdAt: string }
+const seed: Report[] = [
+  { id: '1', reportNo: 'CC-104872', title: 'Overflowing bins near Central Park', category: 'Waste', description: 'Bins have been full for three days and waste is spilling onto the walkway.', location: 'Central Park entrance', latitude: 36, longitude: 42, status: 'Reported', severity: 'High', isAnonymous: false, upvotes: 42, media: [], createdAt: new Date().toISOString() },
+  { id: '2', reportNo: 'CC-104868', title: 'Streetlight out on Cedar Avenue', category: 'Lighting', description: 'The lamp outside the community library is not working.', location: 'Cedar Avenue', latitude: 61, longitude: 28, status: 'In Progress', severity: 'Medium', isAnonymous: false, upvotes: 18, media: [], createdAt: new Date(Date.now()-86400000).toISOString() },
+  { id: '3', reportNo: 'CC-104851', title: 'Water leak beside bus stop', category: 'Water', description: 'Fresh water is pooling beside the westbound bus shelter.', location: '14th Street bus stop', latitude: 71, longitude: 68, status: 'Resolved', severity: 'High', isAnonymous: true, upvotes: 27, media: [], createdAt: new Date(Date.now()-172800000).toISOString() },
+]
+
 export default function Page() {
-  return (
-    <main
-      style={{
-        colorScheme: 'light dark',
-        position: 'relative',
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'light-dark(#fff, #000)',
-        color: 'light-dark(#000, #fff)',
-      }}
-    >
-      <svg
-        aria-hidden="true"
-        style={{ width: 80, height: 80 }}
-        width={80}
-        height={80}
-        fill="none"
-        viewBox="0 0 20 20"
-        xmlns="http://www.w3.org/2000/svg"
-        stroke="currentColor"
-        strokeWidth="0.5"
-      >
-        <path
-          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8H5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <p
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: 'calc(50% + 56px)',
-          transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: 'light-dark(#71717a, #a1a1aa)',
-        }}
-      >
-        Your v0 generation will show here.
-      </p>
-    </main>
-  )
+  const [reports, setReports] = useState<Report[]>(seed), [selected, setSelected] = useState<Report>(seed[0]), [showForm, setShowForm] = useState(false), [query, setQuery] = useState(''), [profile, setProfile] = useState(false), [notice, setNotice] = useState('')
+  const [form, setForm] = useState({ title: '', category: 'Waste', description: '', location: '', severity: 'Medium', isAnonymous: false, media: [] as { name: string; type: string; url: string }[] })
+  useEffect(() => { fetch('/api/reports').then(r => r.ok ? r.json() : []).then(data => { if (Array.isArray(data) && data.length) setReports(data) }).catch(() => {}) }, [])
+  const filtered = useMemo(() => reports.filter(r => `${r.title} ${r.category} ${r.location}`.toLowerCase().includes(query.toLowerCase())), [reports, query])
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); const payload = { ...form, latitude: 49, longitude: 56 }; const res = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const created = res.ok ? await res.json() : { ...payload, id: crypto.randomUUID(), reportNo: `CC-${Date.now().toString().slice(-6)}`, status: 'Reported', upvotes: 0, createdAt: new Date().toISOString() }; setReports(r => [created, ...r]); setSelected(created); setShowForm(false); setNotice('Your report is live. Thank you for helping your community.'); setForm({ title: '', category: 'Waste', description: '', location: '', severity: 'Medium', isAnonymous: false, media: [] }); setTimeout(() => setNotice(''), 4000) }
+  const onFiles = (files: FileList | null) => { if (!files) return; setForm(f => ({ ...f, media: [...f.media, ...Array.from(files).map(file => ({ name: file.name, type: file.type, url: URL.createObjectURL(file) }))] })) }
+  return <main className="min-h-screen bg-background text-foreground"><header className="flex items-center justify-between border-b border-border/70 bg-card/85 px-5 py-4 backdrop-blur md:px-10"><div className="flex items-center gap-3"><div className="brand-mark"><MapPin /></div><div><div className="text-lg font-black tracking-tight">Community<span className="text-primary">Connector</span></div><div className="hidden text-[10px] font-bold uppercase tracking-[.24em] text-muted-foreground sm:block">Make your street heard</div></div></div><nav className="hidden items-center gap-7 text-sm font-semibold text-muted-foreground md:flex"><button className="text-foreground">Explore map</button><button onClick={() => setNotice('Analytics are ready for the authority dashboard in V1.')} className="flex items-center gap-2"><BarChart3 /> Analytics</button></nav><div className="flex items-center gap-2"><button onClick={() => setProfile(true)} className="profile-button"><CircleUserRound /> <span className="hidden sm:inline">My profile</span></button><button onClick={() => setShowForm(true)} className="report-button"><Plus /> Report issue</button><button className="icon-button md:hidden"><Menu /></button></div></header><section className="hero-shell"><div><div className="eyebrow"><Sparkles /> Civic tech, powered by people</div><h1>Spot it.<br /><span>Share it.</span><br />Solve it together.</h1><p>One clear channel for the everyday issues that shape your neighborhood. Report, rally, and see progress in real time.</p><button onClick={() => setShowForm(true)} className="hero-cta">Create a report <ChevronRight /></button></div><div className="hero-stats"><div><strong>{reports.length + 1240}</strong><span>reports raised</span></div><div><strong>89%</strong><span>issues moving</span></div><div><strong>4.8k</strong><span>active neighbors</span></div></div></section><section className="workspace"><div className="workspace-top"><div><div className="section-kicker">LIVE COMMUNITY PULSE</div><h2>Issues near you</h2></div><div className="search-box"><Search /><input aria-label="Search reports" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by issue or area" /></div></div><div className="workspace-grid"><div className="map-card"><div className="map-toolbar"><span><span className="live-dot" /> Demo map · Riverside district</span><button onClick={() => setNotice('Map filters are ready for your next sprint.')}><ShieldCheck /> Verified reports</button></div><div className="demo-map"><div className="map-label label-one">Central Park</div><div className="map-label label-two">Cedar Avenue</div><div className="map-label label-three">14th Street</div><div className="road road-a" /><div className="road road-b" /><div className="road road-c" />{filtered.map((report, i) => <button key={report.id} onClick={() => setSelected(report)} className={`map-pin pin-${i % 3} ${selected.id === report.id ? 'selected' : ''}`} style={{ left: `${report.longitude}%`, top: `${report.latitude}%` }} aria-label={`View ${report.title}`}><span>{report.category === 'Waste' ? '♻' : report.category === 'Water' ? '≈' : '!'}</span></button>)}</div><div className="map-legend"><span><i className="legend-dot red" /> Needs attention</span><span><i className="legend-dot amber" /> In progress</span><span><i className="legend-dot green" /> Resolved</span></div></div><aside className="issue-panel"><div className="panel-header"><div><div className="section-kicker">SELECTED REPORT</div><h3>{selected.title}</h3></div><button className="icon-button" onClick={() => setSelected(filtered[0] || seed[0])}><X /></button></div><div className="issue-meta"><span className={`status status-${selected.status.replace(' ', '-').toLowerCase()}`}>{selected.status}</span><span className="severity">{selected.severity} severity</span></div><p>{selected.description}</p><div className="location-row"><MapPin /> <span>{selected.location}</span></div><div className="report-code"><span>REPORT NO.</span><strong>{selected.reportNo}</strong><span className="ml-auto">{new Date(selected.createdAt).toLocaleDateString()}</span></div><div className="issue-actions"><button onClick={() => setReports(rs => rs.map(r => r.id === selected.id ? { ...r, upvotes: r.upvotes + 1 } : r))}><ThumbsUp /> Support issue <b>{selected.upvotes}</b></button><button onClick={() => setNotice('Thanks for flagging this report for review.')} className="text-button">Flag report</button></div></aside></div></section><section className="bottom-grid"><div className="recent-card"><div className="flex items-center justify-between"><div><div className="section-kicker">COMMUNITY FEED</div><h2>Recent reports</h2></div><button className="text-button">View all <ChevronRight /></button></div><div className="feed-list">{filtered.slice(0, 3).map(r => <button key={r.id} onClick={() => setSelected(r)} className="feed-item"><span className={`feed-icon category-${r.category.toLowerCase()}`}>{r.category === 'Waste' ? '♻' : r.category === 'Water' ? '≈' : '!'}</span><span className="feed-copy"><strong>{r.title}</strong><small>{r.location} · {r.reportNo}</small></span><span className={`status status-${r.status.replace(' ', '-').toLowerCase()}`}>{r.status}</span></button>)}</div></div><div className="profile-card"><div className="profile-orb"><CircleUserRound /></div><div><div className="section-kicker">YOUR IMPACT</div><h3>Hey, Alex</h3><p>You have helped move 6 issues forward this month.</p></div><button onClick={() => setProfile(true)} className="text-button">Open profile <ChevronRight /></button></div></section>{showForm && <div className="modal-backdrop"><form onSubmit={submit} className="report-modal"><div className="modal-head"><div><div className="section-kicker">NEW COMMUNITY REPORT</div><h2>Make it visible.</h2></div><button type="button" onClick={() => setShowForm(false)} className="icon-button"><X /></button></div><label>What is happening?<input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Broken streetlight near school" /></label><div className="form-grid"><label>Category<select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}><option>Waste</option><option>Lighting</option><option>Water</option><option>Roads</option><option>Safety</option></select></label><label>Severity<select value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })}><option>Low</option><option>Medium</option><option>High</option></select></label></div><label>Where is it?<input required value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Street, landmark or neighborhood" /></label><label>Tell us more<textarea required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Add useful context for neighbors and authorities..." /></label><label className="upload-zone"><input type="file" accept="image/*,video/*" multiple onChange={e => onFiles(e.target.files)} /><Camera /> <strong>Add photo or video evidence</strong><small>Drag files here or browse · up to 5 files</small>{form.media.length > 0 && <span className="file-count"><FileVideo /> {form.media.length} file(s) attached</span>}</label><label className="anonymous"><input type="checkbox" checked={form.isAnonymous} onChange={e => setForm({ ...form, isAnonymous: e.target.checked })} /> Report anonymously</label><button className="hero-cta w-full justify-center" type="submit">Publish report <ChevronRight /></button></form></div>}{profile && <div className="modal-backdrop"><div className="profile-modal"><button onClick={() => setProfile(false)} className="icon-button self-end"><X /></button><div className="profile-avatar">A</div><div className="section-kicker">CITIZEN PROFILE</div><h2>Alex Morgan</h2><p>Riverside neighborhood · Member since 2026</p><div className="profile-metrics"><div><strong>6</strong><span>reports</span></div><div><strong>142</strong><span>neighbors helped</span></div><div><strong>4</strong><span>resolved</span></div></div><button onClick={() => setProfile(false)} className="hero-cta w-full justify-center">Done</button></div></div>}{notice && <div className="toast"><CheckCircle2 /> {notice}</div>}</main>
 }
