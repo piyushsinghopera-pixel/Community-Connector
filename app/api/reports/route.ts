@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { desc } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
 import { z } from 'zod'
 import { civicReports, db } from '@/lib/db'
 
@@ -14,6 +16,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) return NextResponse.json({ error: 'Sign in to publish a report.' }, { status: 401 })
   const parsed = reportSchema.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Please complete all report fields.' }, { status: 400 })
   try {
